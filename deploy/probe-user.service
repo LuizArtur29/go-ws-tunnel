@@ -7,7 +7,7 @@ StartLimitBurst=5
 [Service]
 Type=simple
 EnvironmentFile=%h/.config/go-ws-tunnel/probe.env
-ExecStart=%h/.local/share/go-ws-tunnel/bin/probe server -listen ${PROBE_LISTEN} -cert %h/.config/go-ws-tunnel/server.pem -key %h/.config/go-ws-tunnel/server.key -token-file %h/.config/go-ws-tunnel/access.token
+ExecStart=%h/.local/share/go-ws-tunnel/bin/probe server -unix ${PROBE_UNIX_SOCKET} -cert %h/.config/go-ws-tunnel/server.pem -key %h/.config/go-ws-tunnel/server.key -token-file %h/.config/go-ws-tunnel/access.token
 Restart=on-failure
 RestartSec=3
 NoNewPrivileges=true

@@ -2,8 +2,8 @@
 
 A aplicação é um diagnóstico WSS, sem encaminhamento SSH nesta etapa.
 O Nginx mantém a porta pública 443, o domínio e o certificado existentes. O Go
-escuta em endereço interno na porta 18443 com TLS próprio. O Nginx verifica esse
-certificado. Não exponha 18443 na interface pública.
+escuta em um socket Unix compartilhado com TLS próprio. O Nginx verifica esse
+certificado. Esse trecho não abre porta TCP nem depende da rede bridge Docker.
 
 ## Preparar como usuário comum
 
@@ -13,13 +13,25 @@ certificado. Não exponha 18443 na interface pública.
 - Instalar ali `access.token`, `server.key` e `server.pem`. Token e chave: 0600.
 - Gerar um certificado interno com SAN `DNS:go-ws-tunnel.internal`. Escolher uma
   validade curta e registrar a expiração; a aplicação não renova certificados.
-- Criar `probe.env` nesse diretório: `PROBE_LISTEN=ENDERECO_INTERNO:18443`.
+- Criar `probe.env` nesse diretório: `PROBE_UNIX_SOCKET=/CAMINHO/COMPARTILHADO/go-ws-tunnel.sock`.
 - Copiar `probe-user.service` para `~/.config/systemd/user/go-ws-tunnel-probe.service`.
 - Executar `systemctl --user daemon-reload` e `systemctl --user enable --now go-ws-tunnel-probe`.
 
-Se o Nginx roda em container, localhost nele é o próprio container. O endereço
-interno deve ser alcançável pelo Nginx e aceito pelo firewall do host. Não altere
-regras existentes sem verificar o caminho real da conexão.
+Se o Nginx roda em container, o diretório do socket deve estar montado nele.
+O caminho do host em `PROBE_UNIX_SOCKET` pode ser diferente do caminho visto
+pelo container em `proxy_pass`. O usuário do Go precisa criar o socket e o
+usuário do Nginx precisa conectar: o exemplo usa UID igual nos dois processos
+e socket com modo 0600. Não use 0666 para contornar permissões.
+
+O template assume que o diretório compartilhado é visto pelo Nginx como
+`/etc/nginx/conf.d`. Adapte os caminhos ao ambiente. Mantenha o socket fora de
+qualquer diretório servido como arquivo estático. O arquivo `.sock` não deve
+ser incluído pelo padrão de configuração `*.conf`.
+
+No desligamento normal, Go remove o próprio socket. Se um SIGKILL deixar
+um socket obsoleto, pare o serviço e confirme que nenhum processo o usa antes
+de removê-lo manualmente. A aplicação nunca remove caminhos existentes ao
+iniciar, para não apagar um arquivo ou listener de outro processo.
 
 O serviço é por usuário. Sua permanência após logout/reboot depende de linger:
 `loginctl show-user "$USER" -p Linger`. Um operador pode habilitá-lo com
@@ -31,9 +43,19 @@ Não há alteração automática de linger, firewall, Docker ou serviços existe
 1. Guardar backup da configuração HTTPS vigente fora do padrão `*.conf`.
 2. Montar/copiar somente o certificado público interno para o caminho indicado
    em `proxy_ssl_trusted_certificate`; não montar a chave privada no Nginx.
-3. Adaptar `probe-nginx.location.example` ao endereço interno real e inserir
+3. Adaptar `probe-nginx.location.example` ao caminho compartilhado real e inserir
    o bloco no servidor HTTPS escolhido. Manter rotas e certificados existentes.
-4. Executar `nginx -t` dentro do ambiente real do Nginx.
+4. Verificar TLS do backend antes de alterar a borda:
+
+   ```bash
+   curl --cacert ~/.config/go-ws-tunnel/server.pem \
+     --unix-socket /CAMINHO/COMPARTILHADO/go-ws-tunnel.sock \
+     -o /dev/null -w '%{http_code}\n' https://go-ws-tunnel.internal/probe
+   ```
+
+   HTTP 401 é esperado sem credencial e confirma HTTP sobre TLS no socket.
+   Não comprova, sozinho, acesso a partir do namespace do container.
+   Executar também `nginx -t` dentro do ambiente real do Nginx.
 5. Apenas após sucesso, executar `nginx -s reload` no mesmo ambiente.
 6. Verificar as rotas de saúde existentes e executar o cliente de diagnóstico
    pelo domínio público, sem `-ca` quando a borda usa certificado público válido.

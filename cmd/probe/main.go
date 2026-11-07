@@ -8,6 +8,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -45,6 +46,7 @@ func run(ctx context.Context, args []string) error {
 func server(ctx context.Context, args []string) error {
 	flags := flag.NewFlagSet("server", flag.ContinueOnError)
 	listen := flags.String("listen", "127.0.0.1:8443", "endereço de escuta TLS")
+	unixPath := flags.String("unix", "", "socket Unix para TLS atrás de proxy; exclusivo com -listen")
 	cert := flags.String("cert", "", "certificado PEM (cadeia completa)")
 	key := flags.String("key", "", "chave privada PEM")
 	token := flags.String("token-file", "", "arquivo com token compartilhado")
@@ -57,6 +59,20 @@ func server(ctx context.Context, args []string) error {
 	if _, err := probe.ReadToken(*token); err != nil {
 		return err
 	}
+	tcpExplicit := false
+	flags.Visit(func(f *flag.Flag) {
+		if f.Name == "listen" {
+			tcpExplicit = true
+		}
+	})
+	if *unixPath != "" && tcpExplicit {
+		return errors.New("use apenas -listen ou -unix")
+	}
+	listener, err := openListener(*listen, *unixPath)
+	if err != nil {
+		return errors.New("não foi possível abrir o listener; confira endereço, permissões e socket existente")
+	}
+	defer listener.Close()
 	srv := &http.Server{
 		Addr: *listen, Handler: probe.Handler(ctx, *token, 8),
 		ReadHeaderTimeout: 5 * time.Second, IdleTimeout: 30 * time.Second,
@@ -74,7 +90,7 @@ func server(ctx context.Context, args []string) error {
 	}()
 	defer close(done)
 	fmt.Println("Servidor de diagnóstico TLS iniciado; endpoint /probe.")
-	err := srv.ListenAndServeTLS(*cert, *key)
+	err = srv.ServeTLS(listener, *cert, *key)
 	if errors.Is(err, http.ErrServerClosed) {
 		return nil
 	}
@@ -168,4 +184,21 @@ func client(ctx context.Context, args []string) error {
 	_ = conn.Close(websocket.StatusNormalClosure, "probe completed")
 	fmt.Printf("OK: %d trocas verificadas em %s na mesma conexão TLS.\n", count, time.Since(started).Round(time.Millisecond))
 	return nil
+}
+
+// openListener never removes an existing path: it may belong to another process.
+// Unix sockets are removed by net.UnixListener.Close during normal shutdown.
+func openListener(address, unixPath string) (net.Listener, error) {
+	if unixPath == "" {
+		return net.Listen("tcp", address)
+	}
+	listener, err := net.Listen("unix", unixPath)
+	if err != nil {
+		return nil, err
+	}
+	if err := os.Chmod(unixPath, 0600); err != nil {
+		_ = listener.Close()
+		return nil, err
+	}
+	return listener, nil
 }

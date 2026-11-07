@@ -1,7 +1,7 @@
-# Include inside an existing HTTPS server block. Replace BACKEND_IP and CA path.
+# Include inside an existing HTTPS server block. Adapt shared socket and CA paths.
 # Go remains responsible for authentication and binary message limits.
 location = /probe {
-    proxy_pass https://BACKEND_IP:18443;
+    proxy_pass https://unix:/etc/nginx/conf.d/go-ws-tunnel.sock:;
     proxy_http_version 1.1;
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection "upgrade";

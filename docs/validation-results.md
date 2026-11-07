@@ -33,3 +33,16 @@ registro público. Os processos locais de teste foram encerrados ao terminar.
 
 O teste interno da VPS não comprova passagem pelo proxy Nginx, pelo domínio
 público ou pela rede institucional. Isso precisa de evidência separada.
+
+## Correção da integração com a borda
+
+A primeira ativação passou em `nginx -t`, mas a conexão pública retornou
+HTTP 504. O script restaurou a configuração anterior e a API permaneceu UP.
+O backend Go estava ativo. A evidência indica falha no caminho TCP entre
+container e host; a regra específica de rede responsável não foi confirmada.
+
+O backend passou a oferecer TLS sobre socket Unix compartilhado. Isso elimina
+a dependência desse trecho em TCP/bridge sem alterar regras de firewall.
+Testes com `-race` cobrem round-trip WSS/TLS pelo socket, modo 0600, preservação
+de arquivos existentes e remoção do socket no fechamento normal.
+A nova ativação pública continua pendente de execução pelo operador.

@@ -35,6 +35,8 @@ longas também podem sofrer restrições. Primeiro medimos a conectividade real.
 - `go test`, detector de corridas e `go vet` para validação.
 
 O diagnóstico termina TLS no próprio Go. Não exige Caddy, Docker ou banco de dados.
+Atrás de um proxy existente, `server -unix /CAMINHO/probe.sock` permite TLS
+sobre socket Unix compartilhado; o acesso externo continua sendo WSS na 443.
 
 ## Compilar e testar
 
