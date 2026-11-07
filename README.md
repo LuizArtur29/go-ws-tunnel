@@ -6,8 +6,8 @@ concorrência e segurança, com evolução documentada em etapas.
 **Estado atual: diagnóstico de conectividade.** Esta versão abre uma conexão
 WebSocket autenticada sobre TLS, troca mensagens binárias e verifica sua
 integridade ao longo do tempo. Ainda não encaminha SSH nem integra o VS Code.
-Laboratório local e backend TLS na VPS validados. A ativação na borda HTTPS
-e o teste externo ainda dependem da etapa operacional; a rede institucional
+Laboratório local, backend TLS e acesso externo pela porta 443 validados,
+incluindo um intervalo de 60 segundos sem mensagens. A rede institucional
 permanece fora desta validação.
 
 ## Problema e arquitetura planejada
@@ -111,7 +111,7 @@ docs/                  arquitetura, aprendizado e validação de rede
 - [x] Implementar diagnóstico WSS autenticado com testes locais de integração.
 - [x] Executar laboratório local e testar falhas de autenticação, TLS e interrupção.
 - [x] Instalar e testar backend TLS isolado na VPS.
-- [ ] Ativar rota na borda HTTPS e validar conexão externa pela porta 443.
+- [x] Ativar rota na borda HTTPS e validar conexão externa pela porta 443.
 - [ ] Validar na rede de uso (adiado até haver acesso à rede).
 - [ ] Implementar proxy TCP local para estudar fluxos e encerramento de conexões.
 - [ ] Transportar o fluxo TCP por WebSocket.

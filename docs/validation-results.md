@@ -16,7 +16,11 @@ Etapa: diagnóstico autenticado WebSocket sobre TLS; sem encaminhamento SSH.
 | Servidor interrompido | Cliente detectou falha durante a sessão, código 1 | Passou |
 | Backend TLS na VPS | 4 trocas em 3,002 s na interface interna | Passou |
 | Saúde da aplicação existente | API e rota de infraestrutura disponíveis antes da integração | Passou |
-| Borda pública 443 | Configuração preparada; aplicação exige sudo pelo operador | Pendente |
+| Borda pública 443 | Cliente externo: 27 trocas verificadas em 30,382 s | Passou |
+| Ociosidade pública | 3 trocas em 65.432 s, com intervalo de 60 s | Passou |
+| Autenticação pública | Token inválido rejeitado com HTTP 401 e código 1 | Passou |
+| Persistência do serviço | Serviço ativo e linger habilitado após ativação | Passou |
+| Saúde após ativação | API UP e rota de infraestrutura respondendo normalmente | Passou |
 | Rede institucional | Teste adiado, sem acesso à rede no momento | Não executado |
 
 Os testes automatizados também cobrem rota incorreta, query inesperada, Origin
@@ -45,4 +49,14 @@ O backend passou a oferecer TLS sobre socket Unix compartilhado. Isso elimina
 a dependência desse trecho em TCP/bridge sem alterar regras de firewall.
 Testes com `-race` cobrem round-trip WSS/TLS pelo socket, modo 0600, preservação
 de arquivos existentes e remoção do socket no fechamento normal.
-A nova ativação pública continua pendente de execução pelo operador.
+O operador executou a nova ativação com sucesso: configuração Nginx válida,
+quatro trocas em 3,003 s pela borda e saúde da aplicação preservada. Em seguida,
+o cliente externo confirmou o caminho computador → HTTPS:443 → Nginx → TLS
+sobre socket Unix → Go. O certificado público foi validado pelas CAs do sistema,
+sem `-ca` nem desativação de verificações.
+
+O teste externo de 30 segundos verificou 27 respostas na mesma conexão, com
+RTT observado entre aproximadamente 185 e 193 ms. O teste de ociosidade
+verificou novamente a conexão após 60 segundos sem mensagens. Esses resultados
+não comprovam funcionamento na rede institucional, encaminhamento SSH ou
+compatibilidade com VS Code, que permanecem etapas futuras.

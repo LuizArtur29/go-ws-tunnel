@@ -68,8 +68,9 @@ de proxy no repositório ou em registros compartilhados.
 
 | Ambiente | Duração pedida | Intervalo | Trocas verificadas | Resultado |
 |---|---|---|---|---|
-| Local com certificado de laboratório | 30s | 1s | a preencher | pendente |
-| VPS pela rede de controle | 30s | 1s | a preencher | pendente |
+| Local com certificado de laboratório | 30s | 1s | 31 | passou |
+| VPS pela rede de controle | 30s | 1s | 27 | passou |
+| VPS pela rede de controle, com ociosidade | 65s | 60s | 3 | passou |
 | VPS pela rede de uso | 15m | 1s | a preencher | pendente |
 | VPS pela rede de uso, com ociosidade | 5m | 60s | a preencher | pendente |
 
@@ -80,3 +81,5 @@ garante a futura sessão SSH, desempenho sustentado ou compatibilidade com VS Co
 Falha de handshake pode indicar DNS, TLS, proxy ou restrição de rede. HTTP 401
 indica autenticação rejeitada; 404, rota incorreta; 503, indisponibilidade de
 credencial ou limite de sessões. Investigue sem desabilitar validação TLS.
+
+Evidências e limites: [registro de validação](validation-results.md).
