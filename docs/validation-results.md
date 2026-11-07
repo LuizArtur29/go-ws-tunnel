@@ -1,7 +1,8 @@
 # Registro de validação
 
 Data: 7 de novembro de 2026 (America/Recife).
-Etapa: diagnóstico autenticado WebSocket sobre TLS; sem encaminhamento SSH.
+Etapa: diagnóstico e túnel SSH autenticados sobre WebSocket/TLS, com validação
+externa pela porta 443. Teste na rede institucional ainda não executado.
 
 ## Verificações executadas
 
@@ -57,9 +58,10 @@ sem `-ca` nem desativação de verificações.
 
 O teste externo de 30 segundos verificou 27 respostas na mesma conexão, com
 RTT observado entre aproximadamente 185 e 193 ms. O teste de ociosidade
-verificou novamente a conexão após 60 segundos sem mensagens. Esses resultados
-não comprovam funcionamento na rede institucional, encaminhamento SSH ou
-compatibilidade com VS Code, que permanecem etapas futuras.
+verificou novamente a conexão após 60 segundos sem mensagens. Isoladamente,
+esses testes de diagnóstico não comprovam transporte SSH. A validação SSH
+foi realizada depois e está registrada a seguir. A rede institucional e a
+interface do VS Code continuam sem validação.
 
 ## Implementação do túnel SSH
 
@@ -75,15 +77,17 @@ rota `/ssh` opcional no servidor e subprotocolo `go-ws-tunnel.v1`.
 | Auth, subprotocolo, limite e frames inválidos | Passou |
 | CLI TCP, stdio e loopback com 2 MiB | Passou |
 | CLI detecta backend encerrado e token inválido | Passou |
-| SSH real com chave e identidade verificadas | Passou no teste interno |
-| SSH stdin/stdout binário de 1 MiB | Passou no teste interno |
-| Quatro sessões SSH reais simultâneas | Passou no teste interno |
-| Upload/download SFTP de 1 MiB com SHA-256 | Passou no teste interno |
-| Terminal interativo com PTY | Passou no teste interno |
-| Encaminhamento SSH local de portas | Passou no teste interno |
-| Encaminhamento dinâmico SOCKS5 | Passou no teste interno |
-| Sessão SSH de 65 segundos | Passou no teste interno |
-| SSH e SFTP pela borda pública 443 | Pendente de ativação pelo operador |
+| SSH real com chave e identidade verificadas | Passou também pela borda pública 443 |
+| SSH stdin/stdout binário de 1 MiB | Passou também pela borda pública 443 |
+| Quatro sessões SSH reais simultâneas | Passou também pela borda pública 443 |
+| Upload/download SFTP de 1 MiB com SHA-256 | Passou também pela borda pública 443 |
+| Terminal interativo com PTY | Passou também pela borda pública 443 |
+| Encaminhamento SSH local de portas | Passou também pela borda pública 443 |
+| Encaminhamento dinâmico SOCKS5 | Passou também pela borda pública 443 |
+| Sessão SSH de 65 segundos | Passou também pela borda pública 443 |
+| SSH e SFTP pela borda pública 443 | Passou |
+| Modo cliente TCP local com sessão SSH real | Passou pela borda pública 443 |
+| Token inválido no endpoint SSH público | Rejeitado com HTTP 401 |
 | Interface gráfica VS Code Remote SSH | Não executado: aplicativo indisponível |
 | Rede institucional | Não executado: acesso indisponível |
 
@@ -99,3 +103,27 @@ O CI do commit de implementação passou. O ambiente não possui VS Code,
 VS Code Insiders ou VSCodium no PATH; o guia está pronto, mas a interface
 gráfica não foi validada. Os testes de encaminhamento local e SOCKS5 verificam
 os mecanismos SSH usados por ferramentas remotas, sem substituir esse teste.
+
+## Validação pública final do SSH
+
+Após a ativação pelo operador, o cliente neste computador acessou diretamente
+o domínio público na porta 443. Não foi usado o encaminhamento administrativo
+SSH do preflight, nem CA privada no cliente público. O certificado público e a
+identidade OpenSSH continuaram sendo verificados.
+
+Foram confirmados autenticação por chave, comando remoto, entrada/saída binária
+de 1 MiB, PTY, quatro sessões simultâneas, upload/download por SFTP de 1 MiB com
+SHA-256 idêntico, encaminhamento local e SOCKS5, e sessão utilizável durante
+65 segundos com keepalive. O modo com porta TCP local também abriu SSH real
+pelo mesmo endpoint público. Credencial de transporte inválida foi rejeitada
+com HTTP 401. O alias SSH privado foi preparado para uso no computador.
+
+O serviço permaneceu ativo, `/probe` foi preservado, a API respondeu UP e a rota
+de infraestrutura respondeu normalmente após a ativação. Os testes criaram
+apenas arquivo remoto temporário do usuário, removido ao finalizar. Os clientes
+auxiliares e listeners temporários também foram encerrados.
+
+A preparação está concluída para levar o cliente à rede institucional. Esses
+resultados não garantem a política ou o comportamento daquela rede. O guia de
+primeiro teste descreve as verificações a executar lá. Não foi feito teste
+gráfico de VS Code: o aplicativo não está disponível neste ambiente.

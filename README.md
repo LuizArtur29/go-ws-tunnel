@@ -3,10 +3,10 @@
 Túnel SSH sobre WebSocket e TLS, desenvolvido em Go para aprender redes,
 concorrência, half-close e controle de acesso.
 
-**Estado atual:** transporte implementado e testado em laboratório e contra o
-OpenSSH real da VPS por acesso interno de preparação. A rota pública `/ssh`
-está preparada e aguarda ativação pelo operador. O diagnóstico público `/probe`
-já foi validado. O teste na rede institucional ainda não foi executado.
+**Estado atual:** túnel SSH implementado e validado pela porta pública 443,
+com autenticação por chave, terminal interativo, SFTP, sessões simultâneas e
+encaminhamento de portas. O diagnóstico `/probe` permanece disponível.
+O teste na rede institucional e a interface do VS Code ainda não foram executados.
 
 ## Arquitetura
 
@@ -125,7 +125,7 @@ válido, não passe `-ca`.
 - [x] Destino fixo loopback configurado no servidor.
 - [x] SSH real, sessões simultâneas e SFTP no teste interno de preparação.
 - [x] Templates systemd/Nginx, guias de uso e roteiro de teste.
-- [ ] Ativar `/ssh` na borda e validar SSH/SFTP pela conexão pública.
+- [x] Ativar `/ssh` na borda e validar SSH/SFTP pela conexão pública.
 - [ ] Validar interface VS Code Remote SSH quando o aplicativo estiver disponível.
 - [ ] Validar funcionamento na rede institucional.
 
