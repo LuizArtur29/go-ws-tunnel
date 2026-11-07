@@ -1,6 +1,9 @@
 # Diagnóstico em uma VPS com Nginx existente
 
-A aplicação é um diagnóstico WSS, sem encaminhamento SSH nesta etapa.
+A aplicação oferece diagnóstico `/probe` e encaminhamento `/ssh` opcional.
+O template do serviço habilita explicitamente `-ssh-target 127.0.0.1:22`.
+Para manter somente diagnóstico, remova essa opção da unidade e recarregue
+o serviço. A configuração Nginx de exemplo inclui ambas as rotas.
 O Nginx mantém a porta pública 443, o domínio e o certificado existentes. O Go
 escuta em um socket Unix compartilhado com TLS próprio. O Nginx verifica esse
 certificado. Esse trecho não abre porta TCP nem depende da rede bridge Docker.
@@ -62,7 +65,7 @@ Não há alteração automática de linger, firewall, Docker ou serviços existe
 7. Restaurar o backup e recarregar caso a validação falhe.
 
 Nenhum token deve estar no Nginx ou em URLs. O header é encaminhado sobre TLS.
-O exemplo desativa access log apenas para `/probe`; o restante do serviço mantém
+O exemplo desativa access log para `/probe` e `/ssh`; o restante do serviço mantém
 seu logging. Timeout do proxy precisa ser maior que o intervalo do diagnóstico.
 
 A integração com Nginx usa [upgrade WebSocket](https://nginx.org/en/docs/http/websocket.html)

@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/LuizArtur29/go-ws-tunnel/internal/probe"
+	"github.com/LuizArtur29/go-ws-tunnel/internal/tunnel"
 	"github.com/coder/websocket"
 )
 
@@ -50,6 +51,7 @@ func server(ctx context.Context, args []string) error {
 	cert := flags.String("cert", "", "certificado PEM (cadeia completa)")
 	key := flags.String("key", "", "chave privada PEM")
 	token := flags.String("token-file", "", "arquivo com token compartilhado")
+	sshTarget := flags.String("ssh-target", "", "habilita /ssh para destino loopback fixo, ex. 127.0.0.1:22")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
@@ -73,8 +75,17 @@ func server(ctx context.Context, args []string) error {
 		return errors.New("não foi possível abrir o listener; confira endereço, permissões e socket existente")
 	}
 	defer listener.Close()
+	mux := http.NewServeMux()
+	mux.Handle("/probe", probe.Handler(ctx, *token, 8))
+	if *sshTarget != "" {
+		handler, err := tunnel.Handler(ctx, *token, *sshTarget, 8)
+		if err != nil {
+			return err
+		}
+		mux.Handle("/ssh", handler)
+	}
 	srv := &http.Server{
-		Addr: *listen, Handler: probe.Handler(ctx, *token, 8),
+		Addr: *listen, Handler: mux,
 		ReadHeaderTimeout: 5 * time.Second, IdleTimeout: 30 * time.Second,
 		MaxHeaderBytes: 8192, TLSConfig: &tls.Config{MinVersion: tls.VersionTLS12},
 	}
@@ -89,7 +100,7 @@ func server(ctx context.Context, args []string) error {
 		}
 	}()
 	defer close(done)
-	fmt.Println("Servidor de diagnóstico TLS iniciado; endpoint /probe.")
+	fmt.Println("Servidor TLS iniciado; diagnóstico /probe, SSH opcional.")
 	err = srv.ServeTLS(listener, *cert, *key)
 	if errors.Is(err, http.ErrServerClosed) {
 		return nil

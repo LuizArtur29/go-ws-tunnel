@@ -65,20 +65,7 @@ func Handler(ctx context.Context, tokenFile string, maxSessions int) http.Handle
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
-		token, err := ReadToken(tokenFile)
-		if err != nil {
-			http.Error(w, "unavailable", http.StatusServiceUnavailable)
-			return
-		}
-		auth := r.Header.Values("Authorization")
-		if len(auth) != 1 || len(r.Header.Values("Origin")) != 0 {
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
-			return
-		}
-		got := sha256.Sum256([]byte(auth[0]))
-		want := sha256.Sum256([]byte("Bearer " + token))
-		if subtle.ConstantTimeCompare(got[:], want[:]) != 1 {
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
+		if !Authorize(w, r, tokenFile) {
 			return
 		}
 		select {
@@ -131,4 +118,25 @@ func RoundTrip(ctx context.Context, conn *websocket.Conn) (time.Duration, error)
 		return 0, errors.New("resposta diferente dos dados enviados")
 	}
 	return time.Since(start), nil
+}
+
+// Authorize validates the transport credential before a WebSocket upgrade.
+func Authorize(w http.ResponseWriter, r *http.Request, tokenFile string) bool {
+	token, err := ReadToken(tokenFile)
+	if err != nil {
+		http.Error(w, "unavailable", http.StatusServiceUnavailable)
+		return false
+	}
+	auth := r.Header.Values("Authorization")
+	if len(auth) != 1 || len(r.Header.Values("Origin")) != 0 {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return false
+	}
+	got := sha256.Sum256([]byte(auth[0]))
+	want := sha256.Sum256([]byte("Bearer " + token))
+	if subtle.ConstantTimeCompare(got[:], want[:]) != 1 {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return false
+	}
+	return true
 }

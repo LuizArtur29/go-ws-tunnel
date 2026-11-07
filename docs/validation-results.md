@@ -60,3 +60,32 @@ RTT observado entre aproximadamente 185 e 193 ms. O teste de ociosidade
 verificou novamente a conexão após 60 segundos sem mensagens. Esses resultados
 não comprovam funcionamento na rede institucional, encaminhamento SSH ou
 compatibilidade com VS Code, que permanecem etapas futuras.
+
+## Implementação do túnel SSH
+
+Implementados `tunnel stdio`, `tunnel client` e `tunnel tcp-proxy`, além da
+rota `/ssh` opcional no servidor e subprotocolo `go-ws-tunnel.v1`.
+
+| Teste | Resultado |
+| --- | --- |
+| Relay WSS binário de 4 MiB com half-close | Passou |
+| EOF reverso, mantendo a outra direção gravável | Passou |
+| Quatro sessões concorrentes de relay | Passou |
+| Cancelamento e fechamento dos workers | Passou |
+| Auth, subprotocolo, limite e frames inválidos | Passou |
+| CLI TCP, stdio e loopback com 2 MiB | Passou |
+| CLI detecta backend encerrado e token inválido | Passou |
+| SSH real com chave e identidade verificadas | Passou no teste interno |
+| SSH stdin/stdout binário de 1 MiB | Passou no teste interno |
+| Quatro sessões SSH reais simultâneas | Passou no teste interno |
+| Upload/download SFTP de 1 MiB com SHA-256 | Passou no teste interno |
+| SSH e SFTP pela borda pública 443 | Pendente de ativação pelo operador |
+| Interface gráfica VS Code Remote SSH | Não executado: aplicativo indisponível |
+| Rede institucional | Não executado: acesso indisponível |
+
+O teste interno usou um encaminhamento SSH administrativo temporário até o
+socket TLS para verificar a aplicação antes de liberar `/ssh` no Nginx.
+Ele não comprova sozinho que a rota pública de SSH está ativa. O encaminhamento
+de preparação e os arquivos temporários remotos foram removidos ao finalizar.
+Os testes automatizados de concorrência e encerramento passaram também em
+dez execuções consecutivas com o detector de corridas.

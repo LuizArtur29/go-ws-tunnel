@@ -1,61 +1,74 @@
 # go-ws-tunnel
 
-Um túnel SSH sobre WebSocket e TLS, desenvolvido em Go para aprender redes,
-concorrência e segurança, com evolução documentada em etapas.
+Túnel SSH sobre WebSocket e TLS, desenvolvido em Go para aprender redes,
+concorrência, half-close e controle de acesso.
 
-**Estado atual: diagnóstico de conectividade.** Esta versão abre uma conexão
-WebSocket autenticada sobre TLS, troca mensagens binárias e verifica sua
-integridade ao longo do tempo. Ainda não encaminha SSH nem integra o VS Code.
-Laboratório local, backend TLS e acesso externo pela porta 443 validados,
-incluindo um intervalo de 60 segundos sem mensagens. A rede institucional
-permanece fora desta validação.
+**Estado atual:** transporte implementado e testado em laboratório e contra o
+OpenSSH real da VPS por acesso interno de preparação. A rota pública `/ssh`
+está preparada e aguarda ativação pelo operador. O diagnóstico público `/probe`
+já foi validado. O teste na rede institucional ainda não foi executado.
 
-## Problema e arquitetura planejada
-
-Quando o acesso direto à porta 22 está indisponível, queremos experimentar o
-transporte de SSH por uma conexão WebSocket com TLS na porta 443, em redes
-onde esse uso seja autorizado.
+## Arquitetura
 
 ```text
-Cliente SSH → TCP local → cliente Go → WSS:443 → servidor Go → SSH local:22
+SSH / SCP / SFTP / Remote SSH
+          ↓ stdin/stdout (ProxyCommand) ou TCP loopback
+       cliente Go
+          ↓ WebSocket + TLS — porta 443
+         Nginx
+          ↓ TLS sobre socket Unix compartilhado
+       servidor Go
+          ↓ TCP loopback — destino fixo configurado no servidor
+        OpenSSH
 ```
 
-O SSH mantém sua autenticação por chave e a verificação da identidade do servidor.
-O túnel terá autenticação própria e um destino fixo configurado na VPS.
-A porta 443 aberta não garante funcionamento: WebSocket, IP, domínio e conexões
-longas também podem sofrer restrições. Primeiro medimos a conectividade real.
+O OpenSSH continua autenticando o usuário por chave e verificando a identidade
+do servidor. O token autoriza apenas o canal de transporte. Não implementamos
+criptografia própria ou o protocolo SSH.
 
-## Ferramentas
+A porta 443 aberta não garante funcionamento em qualquer rede: WebSocket,
+domínio, IP, proxy obrigatório e duração das conexões podem sofrer restrições.
 
-- Go 1.24 ou superior; biblioteca padrão para rede, HTTP, TLS e contextos.
-- [`coder/websocket`](https://github.com/coder/websocket), versão fixada em `go.mod`,
-  para implementar o protocolo WebSocket. A lógica do túnel será nossa.
-- OpenSSL para gerar certificados de laboratório.
-- OpenSSH como destino na etapa futura.
-- `go test`, detector de corridas e `go vet` para validação.
+## Compilar e verificar
 
-O diagnóstico termina TLS no próprio Go. Não exige Caddy, Docker ou banco de dados.
-Atrás de um proxy existente, `server -unix /CAMINHO/probe.sock` permite TLS
-sobre socket Unix compartilhado; o acesso externo continua sendo WSS na 443.
-
-## Compilar e testar
-
-Na raiz do repositório:
+Go 1.24 ou superior:
 
 ```bash
-go mod download
-go test -race ./...
-go vet ./...
-mkdir -p bin
-go build -o bin/probe ./cmd/probe
+make build
+make check
 ```
 
-A integração contínua executa formatação, análise estática, testes e compilação.
-Os testes locais precisam poder abrir sockets em localhost.
+Os binários ficam em `bin/probe` e `bin/tunnel`. O Makefile usa `go build`,
+`go vet`, `go test -race` e `gofmt`. A dependência WebSocket é
+[`coder/websocket`](https://github.com/coder/websocket), fixada em `go.mod`.
 
-## Laboratório local
+## Usar SSH
 
-Os comandos abaixo são para Linux/macOS, com Go e OpenSSL instalados.
+Configure uma entrada SSH com `ProxyCommand` conforme o
+[guia do túnel](docs/ssh-tunnel.md), usando domínio, chave e token próprios:
+
+```bash
+ssh minha-vps-wss
+scp arquivo.txt minha-vps-wss:/CAMINHO/DO/USUARIO/
+sftp minha-vps-wss
+```
+
+Também há cliente com porta local e exercício TCP sem WebSocket:
+
+```bash
+./bin/tunnel client -url wss://tunel.example.com/ssh \
+  -token-file local/access.token -listen 127.0.0.1:2222
+
+./bin/tunnel tcp-proxy -listen 127.0.0.1:2222 -target 127.0.0.1:22
+```
+
+O segundo comando é apenas um exercício local. Para ativar encaminhamento no
+servidor TLS, use `probe server ... -ssh-target 127.0.0.1:22`. Sem essa opção,
+`/ssh` fica desabilitada. O template systemd inclui essa opção explicitamente.
+
+## Laboratório de diagnóstico
+
+Linux/macOS com OpenSSL:
 
 ```bash
 mkdir -p local
@@ -82,55 +95,57 @@ Em outro:
   -token-file local/access.token -ca local/server.pem -duration 30s
 ```
 
-O cliente imprime o tempo de ida e volta de cada mensagem e termina com `OK`
-se todas as trocas forem verificadas. Falhas encerram o processo com código 1.
-`-ca` adiciona confiança explícita ao certificado de laboratório; não desabilita
-verificação de certificado ou de hostname. Não há opção `insecure`.
+`-ca` adiciona confiança explícita ao certificado de laboratório. A verificação
+de certificado e hostname permanece ativa. Na borda pública com certificado
+válido, não passe `-ca`.
 
-## Teste na VPS e na rede de uso
+## Organização e documentação
 
-Consulte [o roteiro de validação](docs/network-validation.md) antes da implantação.
-Ele descreve TLS, porta 443, proxy e como registrar os resultados sem publicar
-credenciais ou detalhes da rede.
+| Caminho | Responsabilidade |
+| --- | --- |
+| `cmd/probe` | Servidor TLS, diagnóstico e encaminhamento opcional |
+| `cmd/tunnel` | ProxyCommand, porta local e exercício TCP |
+| `internal/probe` | Diagnóstico binário e autorização compartilhada |
+| `internal/tunnel` | Protocolo v1, relay bidirecional e destino fixo |
+| `deploy` | Templates Nginx/systemd e operação |
+| `.github/workflows` | Verificação automática de Go |
 
-Resultados executados: [registro de validação](docs/validation-results.md).
-Templates operacionais: [implantação](deploy/README.md).
-
-## Organização
-
-```text
-cmd/probe/              CLI de diagnóstico: server e client
-internal/probe/         autenticação, echo binário e verificação dos dados
-docs/                  arquitetura, aprendizado e validação de rede
-.github/workflows/     verificações automáticas
-```
+- [Como estudar o código](docs/learning-path.md).
+- [SSH, SCP, SFTP e configuração para VS Code](docs/ssh-tunnel.md).
+- [Implantação e operação](deploy/README.md).
+- [Diagnóstico e validação da rede](docs/network-validation.md).
+- [Primeiro teste na rede de uso](docs/first-network-test.md).
+- [Evidências executadas e limites](docs/validation-results.md).
 
 ## Etapas
 
-- [x] Documentar escopo e stack.
-- [x] Implementar diagnóstico WSS autenticado com testes locais de integração.
-- [x] Executar laboratório local e testar falhas de autenticação, TLS e interrupção.
-- [x] Instalar e testar backend TLS isolado na VPS.
-- [x] Ativar rota na borda HTTPS e validar conexão externa pela porta 443.
-- [ ] Validar na rede de uso (adiado até haver acesso à rede).
-- [ ] Implementar proxy TCP local para estudar fluxos e encerramento de conexões.
-- [ ] Transportar o fluxo TCP por WebSocket.
-- [ ] Restringir destino ao SSH local e testar sessão SSH real.
-- [ ] Validar transferência de arquivos e VS Code Remote SSH.
-- [ ] Adicionar operação via systemd e limites para uso contínuo.
+- [x] Diagnóstico WSS autenticado e validação externa na porta 443.
+- [x] Proxy TCP com half-close e cancelamento.
+- [x] Transporte TCP por WebSocket com EOF por direção e keepalive.
+- [x] Destino fixo loopback configurado no servidor.
+- [x] SSH real, sessões simultâneas e SFTP no teste interno de preparação.
+- [x] Templates systemd/Nginx, guias de uso e roteiro de teste.
+- [ ] Ativar `/ssh` na borda e validar SSH/SFTP pela conexão pública.
+- [ ] Validar interface VS Code Remote SSH quando o aplicativo estiver disponível.
+- [ ] Validar funcionamento na rede institucional.
 
-## Segurança e limites desta etapa
+## Controle de acesso e limites
 
-O endpoint apenas devolve mensagens binárias de até 4 KiB e aceita até oito
-sessões simultâneas. Exige token, rejeita `Origin` de navegador e não abre
-conexões a outros destinos. O token é lido a cada handshake: sua substituição
-revoga novas conexões, mas sessões abertas precisam ser encerradas separadamente.
-Mensagens inativas por dois minutos são encerradas. Não implementamos ainda
-limitação de tentativas por IP nem administração de usuários; esta é uma versão
-de laboratório, sem alegação de prontidão para produção.
+O servidor limita `/ssh` a oito sessões e `/probe` a outras oito. O cliente TCP
+escuta apenas em loopback. Mensagens do túnel têm até 32 KiB de dados; dados e
+EOF usam frames distintos. O subprotocolo versionado evita confundir diagnóstico
+e transporte. O destino não é escolhido pelo cliente.
 
-Tokens, certificados, chaves, arquivos locais e configurações da IDE estão no
-`.gitignore`. Não publique logs com dados pessoais, IPs privados ou credenciais.
+O token é relido por handshake; sua substituição revoga novas conexões. Sessões
+abertas precisam ser encerradas separadamente. O serviço detecta falhas com
+ping/pong; não reconecta silenciosamente uma sessão SSH quebrada.
+
+Certificados internos têm renovação manual. Ainda não há gestão de usuários,
+revogação individual ou limitação de tentativas por IP. Esta implementação é um
+projeto de aprendizado; resultados executados estão documentados separadamente.
+
+Tokens, chaves, certificados, configuração pessoal e dados da IDE ficam fora do
+Git. Os exemplos públicos usam endereços e caminhos fictícios.
 
 ## Licença
 

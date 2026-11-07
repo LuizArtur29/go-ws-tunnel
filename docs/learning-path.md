@@ -10,11 +10,14 @@
 6. Rode o laboratório em dois terminais. Interrompa o servidor e observe o
    cliente falhar, sem fingir que houve continuidade de sessão.
 
-## Próximo exercício: TCP
+## Etapa implementada: TCP e transporte WebSocket
 
-Construir um proxy local com `net.Listen`, `net.DialContext` e `io.Copy`.
-Testar encerramento de cada lado, cancelamento e múltiplas sessões. Depois
-substituir o trecho entre cliente e servidor pelo transporte WebSocket.
+Leia `internal/tunnel/tunnel.go`: `ProxyTCP` apresenta a versão com
+`net.DialContext` e `io.Copy`; `Relay` apresenta a versão com mensagens
+WebSocket, EOF por direção, keepalive e cancelamento.
+Leia os testes de transferência grande, half-close reverso, concorrência,
+limite de sessões e rejeição de frames inválidos. O guia `ssh-tunnel.md`
+mostra como ligar esses componentes ao OpenSSH.
 
 O OpenSSH continuará implementando SSH. Construiremos o túnel que transporta
 seus bytes, sem criar criptografia ou autenticação SSH próprias.
