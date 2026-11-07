@@ -1,0 +1,11 @@
+/bin/
+/local/
+*.key
+*.pem
+*.token
+.env
+.env.*
+!.env.example
+coverage.out
+.idea/
+/probe
