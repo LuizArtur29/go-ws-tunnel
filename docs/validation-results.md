@@ -79,6 +79,10 @@ rota `/ssh` opcional no servidor e subprotocolo `go-ws-tunnel.v1`.
 | SSH stdin/stdout binário de 1 MiB | Passou no teste interno |
 | Quatro sessões SSH reais simultâneas | Passou no teste interno |
 | Upload/download SFTP de 1 MiB com SHA-256 | Passou no teste interno |
+| Terminal interativo com PTY | Passou no teste interno |
+| Encaminhamento SSH local de portas | Passou no teste interno |
+| Encaminhamento dinâmico SOCKS5 | Passou no teste interno |
+| Sessão SSH de 65 segundos | Passou no teste interno |
 | SSH e SFTP pela borda pública 443 | Pendente de ativação pelo operador |
 | Interface gráfica VS Code Remote SSH | Não executado: aplicativo indisponível |
 | Rede institucional | Não executado: acesso indisponível |
@@ -89,3 +93,9 @@ Ele não comprova sozinho que a rota pública de SSH está ativa. O encaminhamen
 de preparação e os arquivos temporários remotos foram removidos ao finalizar.
 Os testes automatizados de concorrência e encerramento passaram também em
 dez execuções consecutivas com o detector de corridas.
+
+O cliente foi compilado para uso local e a entrada SSH privada foi preparada.
+O CI do commit de implementação passou. O ambiente não possui VS Code,
+VS Code Insiders ou VSCodium no PATH; o guia está pronto, mas a interface
+gráfica não foi validada. Os testes de encaminhamento local e SOCKS5 verificam
+os mecanismos SSH usados por ferramentas remotas, sem substituir esse teste.
