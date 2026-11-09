@@ -1,4 +1,8 @@
-# Validar WebSocket com TLS antes de implementar SSH
+# Diagnosticar WebSocket com TLS
+
+Este guia permite isolar o transporte WSS de problemas de SSH. Para instalar
+o túnel completo, veja o [guia SSH](ssh-tunnel.md) e o
+[runbook de implantação](../deploy/README.md).
 
 ## Preparação
 
@@ -21,9 +25,8 @@ Depois de compilar para o sistema e arquitetura corretos:
   -token-file /CAMINHO/access.token
 ```
 
-Em Linux, vincular a porta 443 geralmente exige permissão específica. Planejaremos
-um serviço com privilégio mínimo; não é necessário executar toda a aplicação como
-root. O exemplo escuta IPv4. Um registro AAAA deve apontar para um caminho IPv6
+Em Linux, vincular a porta 443 geralmente exige permissão específica. A implantação
+documentada usa Nginx na borda e Go sem privilégios em socket Unix. O exemplo escuta IPv4. Um registro AAAA deve apontar para um caminho IPv6
 realmente atendido ou ser removido da configuração de teste.
 
 ## Executar no cliente
@@ -71,8 +74,10 @@ de proxy no repositório ou em registros compartilhados.
 | Local com certificado de laboratório | 30s | 1s | 31 | passou |
 | VPS pela rede de controle | 30s | 1s | 27 | passou |
 | VPS pela rede de controle, com ociosidade | 65s | 60s | 3 | passou |
-| VPS pela rede de uso | 15m | 1s | a preencher | pendente |
-| VPS pela rede de uso, com ociosidade | 5m | 60s | a preencher | pendente |
+
+Na rede do IF, a validação foi feita com SSH e SCP reais, conforme o
+[registro do teste](first-network-test.md). Não foram registradas medições
+do diagnóstico `/probe` nessa rede.
 
 Registre também versão do commit e data. Use rótulos genéricos para ambientes.
 Um sucesso comprova apenas que essa conexão funcionou naquele momento; não

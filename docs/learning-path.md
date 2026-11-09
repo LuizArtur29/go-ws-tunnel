@@ -1,4 +1,4 @@
-# Como estudar esta primeira etapa
+# Como estudar o projeto
 
 1. Leia `cmd/probe/main.go`: flags, sinais do sistema, certificado e contexto.
 2. Leia `internal/probe/probe.go`: autorização HTTP ocorre antes do upgrade
@@ -19,16 +19,16 @@ Leia os testes de transferência grande, half-close reverso, concorrência,
 limite de sessões e rejeição de frames inválidos. O guia `ssh-tunnel.md`
 mostra como ligar esses componentes ao OpenSSH.
 
-O OpenSSH continuará implementando SSH. Construiremos o túnel que transporta
-seus bytes, sem criar criptografia ou autenticação SSH próprias.
+O OpenSSH implementa SSH. O túnel transporta seus bytes e preserva o ciclo
+de vida da conexão, sem criar criptografia ou autenticação SSH próprias.
 
 ## Referências
 
-- https://pkg.go.dev/net
-- https://pkg.go.dev/net/http
-- https://pkg.go.dev/crypto/tls
-- https://pkg.go.dev/context
-- https://pkg.go.dev/github.com/coder/websocket
+- [TCP e conexões: net](https://pkg.go.dev/net)
+- [Servidor e cliente HTTP: net/http](https://pkg.go.dev/net/http)
+- [TLS: crypto/tls](https://pkg.go.dev/crypto/tls)
+- [Cancelamento: context](https://pkg.go.dev/context)
+- [WebSocket: coder/websocket](https://pkg.go.dev/github.com/coder/websocket)
 
 ## O caminho de uma troca de dados
 
@@ -43,4 +43,4 @@ seus bytes, sem criar criptografia ou autenticação SSH próprias.
 
 O tempo impresso é o de ida e volta da mensagem, não apenas latência de rede.
 Inclui processamento e agendamento dos dois processos. A autenticação desse
-canal não substitui a autenticação SSH, que será implementada pelo OpenSSH.
+canal não substitui a autenticação SSH, implementada pelo OpenSSH.

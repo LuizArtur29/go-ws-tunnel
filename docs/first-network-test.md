@@ -1,26 +1,35 @@
-# Roteiro para o primeiro teste na rede de uso
+# Primeiro teste na rede do IF
 
-Antes de sair, confirme que possui o binário `tunnel`, a chave SSH, o token e a
-entrada SSH no computador. Não dependa de baixar dependências naquela rede.
-Faça o teste somente quando esse tipo de acesso estiver autorizado.
+O teste foi concluído na rede do IF usando o alias SSH `pagefy-wss`, já
+configurado no computador. O acesso passou pelo endpoint WebSocket sobre TLS
+na porta 443; a porta 22 direta não foi necessária para a conexão do cliente.
 
-1. Abra o diagnóstico pelo domínio real usando seu token:
+## Resultados
 
-   ```bash
-   ./bin/probe client -url wss://tunel.example.com/probe \
-     -token-file local/access.token -duration 30s
-   ```
+- SSH conectou à VPS e permitiu executar comandos remotos.
+- A inspeção de `/opt/pagefy` funcionou. Para consultar Docker no host foi
+  necessário `sudo`, devido às permissões do socket Docker.
+- SCP enviou e trouxe de volta um arquivo de 50 bytes, com SHA-256 igual.
+- SCP enviou um arquivo de 10 MiB em 11 s (aprox. 923 KB/s) e o baixou em
+  43 s (aprox. 235 KB/s). O SHA-256 da origem e do arquivo retornado foi igual.
+- A sessão permaneceu ociosa e aceitou um comando depois.
 
-2. Abra uma sessão com a entrada SSH previamente preparada:
+As taxas são observações daquela execução e podem variar conforme as condições
+da rede. O teste valida SSH e SCP na rede usada; o VS Code Remote SSH ainda
+precisa de uma validação própria, caso seja parte do uso desejado.
 
-   ```bash
-   ssh minha-vps-wss 'printf ssh-ok'
-   ssh minha-vps-wss
-   ```
+## Comandos usados
 
-3. Execute comandos e teste uma pequena transferência por SFTP/SCP.
-4. Mantenha a sessão ociosa por alguns minutos, depois execute outro comando.
-5. Se usar VS Code, conecte pelo mesmo alias e abra uma pasta remota.
+```bash
+ssh pagefy-wss
+scp /tmp/tunel-envio.txt pagefy-wss:/tmp/tunel-if.txt
+scp pagefy-wss:/tmp/tunel-if.txt /tmp/tunel-retorno.txt
+sha256sum /tmp/tunel-envio.txt /tmp/tunel-retorno.txt
+```
+
+Para repetir a transferência maior, gere um arquivo de 10 MiB e use o mesmo
+padrão SCP de envio, retorno e comparação SHA-256. Não coloque tokens ou chaves
+em comandos compartilhados, capturas ou logs públicos.
 
 ## Se falhar
 

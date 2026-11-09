@@ -1,8 +1,9 @@
 # Registro de validação
 
-Data: 7 de novembro de 2026 (America/Recife).
+Registro iniciado em 7 de novembro de 2026; atualizado em 9 de novembro de 2026
+(America/Recife). As medições abaixo pertencem às respectivas etapas.
 Etapa: diagnóstico e túnel SSH autenticados sobre WebSocket/TLS, com validação
-externa pela porta 443. Teste na rede institucional ainda não executado.
+externa pela porta 443 e teste concluído na rede institucional do IF.
 
 ## Verificações executadas
 
@@ -22,7 +23,11 @@ externa pela porta 443. Teste na rede institucional ainda não executado.
 | Autenticação pública | Token inválido rejeitado com HTTP 401 e código 1 | Passou |
 | Persistência do serviço | Serviço ativo e linger habilitado após ativação | Passou |
 | Saúde após ativação | API UP e rota de infraestrutura respondendo normalmente | Passou |
-| Rede institucional | Teste adiado, sem acesso à rede no momento | Não executado |
+| Rede do IF: sessão SSH | Alias `pagefy-wss` conectou à VPS; comandos remotos executados | Passou |
+| Rede do IF: inspeção Docker | `sudo docker compose ps` e consulta do projeto edge | Passou |
+| Rede do IF: SCP pequeno | Envio e retorno de arquivo de 50 bytes; SHA-256 igual | Passou |
+| Rede do IF: SCP 10 MiB | Upload em 11 s (~923 KB/s), download em 43 s (~235 KB/s); SHA-256 igual | Passou |
+| Rede do IF: sessão ociosa | Sessão mantida ociosa e retomada com comando | Passou |
 
 Os testes automatizados também cobrem rota incorreta, query inesperada, Origin
 de navegador, header de autenticação duplicado, rotação do token, mensagem de
@@ -36,8 +41,9 @@ certificado interno. A borda deve continuar usando seu certificado público.
 Nenhuma chave privada, token, endereço interno real ou log bruto integra este
 registro público. Os processos locais de teste foram encerrados ao terminar.
 
-O teste interno da VPS não comprova passagem pelo proxy Nginx, pelo domínio
-público ou pela rede institucional. Isso precisa de evidência separada.
+Os testes locais e internos da VPS, isoladamente, não comprovavam passagem pela
+rede institucional. A validação do IF foi feita separadamente e está registrada
+abaixo.
 
 ## Correção da integração com a borda
 
@@ -60,8 +66,8 @@ O teste externo de 30 segundos verificou 27 respostas na mesma conexão, com
 RTT observado entre aproximadamente 185 e 193 ms. O teste de ociosidade
 verificou novamente a conexão após 60 segundos sem mensagens. Isoladamente,
 esses testes de diagnóstico não comprovam transporte SSH. A validação SSH
-foi realizada depois e está registrada a seguir. A rede institucional e a
-interface do VS Code continuam sem validação.
+foi realizada depois e está registrada a seguir. Naquela etapa, a rede institucional e a
+interface do VS Code ainda não tinham sido validadas.
 
 ## Implementação do túnel SSH
 
@@ -89,7 +95,7 @@ rota `/ssh` opcional no servidor e subprotocolo `go-ws-tunnel.v1`.
 | Modo cliente TCP local com sessão SSH real | Passou pela borda pública 443 |
 | Token inválido no endpoint SSH público | Rejeitado com HTTP 401 |
 | Interface gráfica VS Code Remote SSH | Não executado: aplicativo indisponível |
-| Rede institucional | Não executado: acesso indisponível |
+| Rede institucional | Concluído posteriormente; veja a seção de validação no IF |
 
 O teste interno usou um encaminhamento SSH administrativo temporário até o
 socket TLS para verificar a aplicação antes de liberar `/ssh` no Nginx.
@@ -123,7 +129,27 @@ de infraestrutura respondeu normalmente após a ativação. Os testes criaram
 apenas arquivo remoto temporário do usuário, removido ao finalizar. Os clientes
 auxiliares e listeners temporários também foram encerrados.
 
-A preparação está concluída para levar o cliente à rede institucional. Esses
-resultados não garantem a política ou o comportamento daquela rede. O guia de
-primeiro teste descreve as verificações a executar lá. Não foi feito teste
-gráfico de VS Code: o aplicativo não está disponível neste ambiente.
+Na etapa anterior, a rede institucional e a interface gráfica do VS Code ainda
+não tinham sido testadas. A validação da rede foi concluída depois, conforme o
+registro abaixo. O VS Code Remote SSH segue sem validação gráfica porque o
+aplicativo não estava disponível neste ambiente.
+
+## Validação na rede do IF
+
+Na rede do IF, o alias SSH `pagefy-wss` abriu uma sessão para a VPS pela borda
+WSS/TLS na porta 443. Foram executados comandos remotos, listados os arquivos
+de `/opt/pagefy` e consultados os serviços Docker. O usuário precisou de `sudo`
+para acessar o socket Docker; isso foi uma permissão local do host e não uma
+falha do túnel. A listagem mostrou o Nginx de borda saudável e publicado nas
+portas 80 e 443.
+
+SCP funcionou nos dois sentidos. Um arquivo de teste de 50 bytes retornou com
+SHA-256 idêntico ao original. Em seguida, um arquivo de 10 MiB foi enviado em
+11 s (aprox. 923 KB/s) e baixado de volta em 43 s (aprox. 235 KB/s); os hashes
+SHA-256 também foram idênticos. A sessão SSH foi deixada ociosa e depois usada
+novamente com sucesso.
+
+Isso confirma, na rede testada do IF, o acesso SSH pela porta 443 e a integridade
+das transferências SCP observadas. As taxas são medições daquela execução e
+podem variar com as condições da rede. A interface gráfica do VS Code Remote
+SSH ainda não foi validada.

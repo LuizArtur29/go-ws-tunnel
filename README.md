@@ -1,12 +1,31 @@
 # go-ws-tunnel
 
+[![Go](https://github.com/LuizArtur29/go-ws-tunnel/actions/workflows/go.yml/badge.svg)](https://github.com/LuizArtur29/go-ws-tunnel/actions/workflows/go.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 Túnel SSH sobre WebSocket e TLS, desenvolvido em Go para aprender redes,
 concorrência, half-close e controle de acesso.
 
 **Estado atual:** túnel SSH implementado e validado pela porta pública 443,
 com autenticação por chave, terminal interativo, SFTP, sessões simultâneas e
 encaminhamento de portas. O diagnóstico `/probe` permanece disponível.
-O teste na rede institucional e a interface do VS Code ainda não foram executados.
+Na rede do IF, foram validados acesso SSH, comandos remotos, retomada após
+ociosidade e SCP nos dois sentidos, incluindo 10 MiB com SHA-256 idêntico.
+A interface gráfica do VS Code Remote SSH ainda não foi validada.
+
+## Por que este projeto existe?
+
+O projeto nasceu da necessidade de acessar uma VPS em uma rede onde a porta
+22 era bloqueada. A implementação transporta os bytes do SSH por uma conexão
+WebSocket protegida por TLS na porta 443 e os entrega ao OpenSSH da VPS.
+
+O objetivo foi aprender Go e redes construindo o transporte: fluxo bidirecional,
+concorrência, encerramento por direção (half-close), keepalive e autenticação
+do canal. O framing WebSocket usa uma biblioteca; TLS e SSH usam suas
+implementações existentes.
+
+**Comece aqui:** [laboratório local completo](docs/quickstart.md) ·
+[acesso à VPS](docs/ssh-tunnel.md) · [resultados reais](docs/validation-results.md).
 
 ## Arquitetura
 
@@ -31,9 +50,11 @@ domínio, IP, proxy obrigatório e duração das conexões podem sofrer restriç
 
 ## Compilar e verificar
 
-Go 1.24 ou superior:
+Go 1.24 ou superior, Git e Make. Os exemplos de operação usam Linux e OpenSSH.
 
 ```bash
+git clone https://github.com/LuizArtur29/go-ws-tunnel.git
+cd go-ws-tunnel
 make build
 make check
 ```
@@ -114,7 +135,7 @@ válido, não passe `-ca`.
 - [SSH, SCP, SFTP e configuração para VS Code](docs/ssh-tunnel.md).
 - [Implantação e operação](deploy/README.md).
 - [Diagnóstico e validação da rede](docs/network-validation.md).
-- [Primeiro teste na rede de uso](docs/first-network-test.md).
+- [Validação na rede do IF](docs/first-network-test.md).
 - [Evidências executadas e limites](docs/validation-results.md).
 
 ## Etapas
@@ -127,7 +148,7 @@ válido, não passe `-ca`.
 - [x] Templates systemd/Nginx, guias de uso e roteiro de teste.
 - [x] Ativar `/ssh` na borda e validar SSH/SFTP pela conexão pública.
 - [ ] Validar interface VS Code Remote SSH quando o aplicativo estiver disponível.
-- [ ] Validar funcionamento na rede institucional.
+- [x] Validar SSH, SCP e ociosidade na rede institucional do IF.
 
 ## Controle de acesso e limites
 
@@ -147,7 +168,11 @@ projeto de aprendizado; resultados executados estão documentados separadamente.
 Tokens, chaves, certificados, configuração pessoal e dados da IDE ficam fora do
 Git. Os exemplos públicos usam endereços e caminhos fictícios.
 
+## Contribuir
+
+Veja [CONTRIBUTING.md](CONTRIBUTING.md) para preparar mudanças e
+[SECURITY.md](SECURITY.md) para relatar vulnerabilidades sem expor credenciais.
+
 ## Licença
 
-A licença ainda será escolhida pelo autor. Repositório público, por si só, não
-concede uma licença geral de uso e redistribuição.
+[MIT](LICENSE) — Copyright (c) 2026 LuizArtur29.
